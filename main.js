@@ -1,16 +1,21 @@
 /* Author: Sean Langley */
 /* Date: March 15 2020   */
 
-var canvas = document.getElementById("myCanvas");
-var score_text = document.getElementById("score");
+var canvas          = document.getElementById("myCanvas");
+var score_text      = document.getElementById("score");
 var high_score_text = document.getElementById("High score");
-var lose_text = document.getElementById("lose text");
-var restart_button = document.getElementById("restart button");
-var flappy = document.getElementById("flappy")
-var background = document.getElementById("background");
+var lose_text       = document.getElementById("lose text");
+var restart_button  = document.getElementById("restart button");
+var flappy          = document.getElementById("flappy")
+var background      = document.getElementById("background");
+var pipe_top        = document.getElementById("pipe top");
+var pipe_body       = document.getElementById("pipe body");
+var top_pipe_head   = document.getElementById("top pipe head");
+var top_pipe_body   = document.getElementById("top pipe body");
 var high_score = 0;
 var ctx = canvas.getContext("2d");
 var hitbox = false;
+var gameover = false;
 var pipes = [];
 var player;
 var updateloop;
@@ -33,6 +38,14 @@ function update(){
     ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
     update_player();
     update_pipes();
+    if (gameover){
+        clearInterval(updateloop);
+        if (player.score > high_score){
+            high_score = player.score;
+            high_score_text.innerHTML = "High score: " + high_score;
+        }
+        lose_text.innerHTML = "You lose!";
+    }
 }
 
 function didCollide(player, pipe){
@@ -81,6 +94,7 @@ function restart(){
     score_text.innerHTML = "Score: 0";
     high_score_text.innerHTML = "High score: " + high_score;
     pipes.length = 0;
+    gameover = false;
 
     newPipePair();
     player = (function(){
@@ -124,33 +138,53 @@ function update_player(){
             }
         }
         player.angle -= player.angular_momentum;
-  
     }
-    ctx.translate(player.x, player.y);
+    var translate_x = player.x + player.width/2;
+    var translate_y = player.y + player.height/2;
+    ctx.translate(translate_x, translate_y);
     ctx.rotate(degrees(player.angle));
-    ctx.translate(-player.x, -player.y);
+    ctx.translate(-translate_x, -translate_y);
     if (hitbox){
         ctx.fillStyle = "red";
         ctx.fillRect(player.x, player.y, player.width, player.height);
     }
     ctx.drawImage(flappy, player.x-15, player.y-15, 88, 88);
-    ctx.translate(player.x, player.y);
+    ctx.translate(translate_x, translate_y);
     ctx.rotate(degrees(-player.angle));
-    ctx.translate(-player.x, -player.y);
+    ctx.translate(-translate_x, -translate_y);
 }
 
 function update_pipes(){
     for (i = 0; i < pipes.length; i++){
-        pipes[i].x -= 10;
-        fill(pipes[i]);
-        if (didCollide(player, pipes[i])) {
-            clearInterval(updateloop);
-            if (player.score > high_score){
-                high_score = player.score;
-                high_score_text.innerHTML = "High score: " + high_score;
+        curr_pipe = pipes[i];
+        curr_pipe.x -= 10;
+        if (hitbox){
+            fill(curr_pipe);
+        }
+        if (curr_pipe.bottom){
+            ctx.drawImage(pipe_top, curr_pipe.x-20, curr_pipe.y-15,
+                pipe_top.width, pipe_top.height);
+                var y_offset = pipe_top.height;
+                while (y_offset < canvas.height){
+                    ctx.drawImage(pipe_body, curr_pipe.x-20, curr_pipe.y-31 + y_offset,
+                        pipe_body.width, pipe_body.height);
+                        y_offset += 39;
+                }
+        }
+        else{
+            ctx.drawImage(top_pipe_head, curr_pipe.x-15,
+                curr_pipe.height-top_pipe_head.height+15,
+                top_pipe_head.width, top_pipe_head.height);
+            var y_offset = top_pipe_head.height+20;
+            while (y_offset < curr_pipe.height + top_pipe_body.height) {
+                ctx.drawImage(top_pipe_body, curr_pipe.x-15,
+                    curr_pipe.height-y_offset,
+                    top_pipe_body.width, top_pipe_body.height);
+                y_offset += top_pipe_body.height-43;
             }
-            lose_text.innerHTML = "You lose!";
-            break;
+        }
+        if (didCollide(player, curr_pipe)) {
+            gameover = true;
         }
     }
 
@@ -168,13 +202,6 @@ function update_pipes(){
 function fill(obj){
     if (typeof obj !== "undefined"){
         ctx.fillStyle = "red";
-        ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
-    }
-}
-
-function clear(obj){
-    if (typeof obj !== "undefined"){
-        ctx.fillStyle = "white";
         ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
     }
 }
