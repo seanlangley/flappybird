@@ -98,7 +98,6 @@ function restart(){
             is_jumping: false,
         }
     })();
-    update_player();
     clearInterval(updateloop);
     updateloop = setInterval(update, 20);
 }
