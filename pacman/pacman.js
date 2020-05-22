@@ -6,31 +6,20 @@ let velocity = 5;
 var pacman;
 var ghost;
 var dots = [];
+var maze = [];
 var win = false;
 var gameover = false;
 
-document.addEventListener('keydown', function(event){
-    if (event.key == "w"){
-        pacman.direction = "up";
-    }
 
-    else if (event.key == "a"){
-        pacman.direction = "left";
-    }
+function main(){
+    restart();
+}
 
-    else if (event.key == "s"){
-        pacman.direction = "down";
-    }
-
-    else if (event.key == "d"){
-        pacman.direction = "right";
-    }
-});
-
-restart();
+main();
 
 function update(){
     clear();
+    draw_maze();
     update_pacman();
     update_ghost();
     update_dots();
@@ -40,12 +29,40 @@ function update(){
 }
 
 function update_pacman(){
-    move(pacman);
+    collided = false;
+    for (let i = 0; i < maze.length; i++){
+        if (willCollide(pacman, maze[i])){
+            collided = true;
+        }
+    }
+    if (!collided){
+        pacman.move();
+    }
     if (didCollide(pacman, ghost)){
         gameover = true;
         lose_text.innerHTML = "You lose!";
     }
     fill(pacman);
+}
+
+function draw_maze(){
+    maze.forEach(fill);
+}
+
+function create_maze(){
+    var line = (function(){
+        var x = pacman.width;
+        var width = canvas.width - 2*x;
+        var height = pacman.height;
+        var y = 100;
+        return {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+        }
+    })();
+    maze.push(line);
 }
 
 function update_ghost(){
@@ -79,66 +96,31 @@ function update_ghost(){
             min_distance = distances[i];
             min_index = i;
         }
-   }
-   if (min_index == 0){
-       ghost.direction = "up";
-   }
-   else if (min_index == 1){
-       ghost.direction = "down";
-   }
-   else if (min_index == 2){
-       ghost.direction = "left";
-   }
-   else if (min_index == 3){
-       ghost.direction = "right";
-   }
-    move(ghost);
+    }
+    if (min_index == 0) {
+        ghost.direction = "up";
+    }
+    else if (min_index == 1) {
+        ghost.direction = "down";
+    }
+    else if (min_index == 2) {
+        ghost.direction = "left";
+    }
+    else if (min_index == 3) {
+        ghost.direction = "right";
+    }
+    ghost.move();
     fill(ghost);
 }
 
-function move(obj){
-    if (obj.direction == "up" && obj.y > 0){
-        obj.y -= velocity;
-    }
-    else if (obj.direction == "down" &&
-             obj.y < canvas.height - obj.height) {
-        obj.y += velocity;
-        
-    }
-    else if (obj.direction == "left" && obj.x >= 0) {
-        obj.x -= velocity; 
-    }
-    else if (obj.direction == "right" &&
-             obj.x < canvas.width - obj.width) {
-        obj.x += velocity; 
-    }
-}
+
 
 function restart(){
-    pacman = (function(){
-        var height = 50;
-        return {
-            width: 50,
-            height: height,
-            x: 20,
-            y: canvas.height-height,
-            score: 0,
-            is_moving: false,
-            direction: "right",
-        }
-    })();
-
-    ghost = (function(){
-        var width = 50;
-        return {
-            width: width,
-            height: 50,
-            x: canvas.width - width,
-            y: 0,
-            direction: "left"
-        }
-    })();
+    var height = 50, width = 50;
+    pacman = new Movable(20, canvas.height-height, 50, height, false, "up");
+    ghost = new Movable(canvas.width - width, 0, width, height, true, "left");
     create_dots();
+    create_maze();
     clearInterval(updateloop);
     updateloop = setInterval(update, 20);
 }
@@ -149,14 +131,7 @@ function create_dots(){
     while (curr_y  < canvas.height){
         curr_x = 0; 
         while (curr_x < canvas.width){
-            var new_dot = {
-                x: curr_x,
-                y: curr_y,
-                width: 5,
-                height: 5,
-                enabled: true,
-            }
-            dots.push(new_dot);
+            dots.push(new Dot(curr_x, curr_y, 5, 5));
             curr_x += dot_distance;
         }
         curr_y += dot_distance;
@@ -191,6 +166,35 @@ function didCollide(obj1, obj2){
         obj1.y + obj1.height > obj2.y) {
             return true;
         }
+    return false;
+}
+
+function willCollide(obj1, obj2){
+    var obj1_copy = Object.assign({}, obj1);
+    if (obj1.direction == "up"){
+        obj1_copy.y -= velocity;
+        if (didCollide(obj1_copy, obj2)){
+            return true;
+        }
+    }
+    else if(obj1.direction == "down"){
+        obj1_copy.y += velocity;
+        if (didCollide(obj1_copy, obj2)){
+            return true;
+        }
+    }
+    else if(obj1.direction == "left"){
+        obj1_copy.x -= velocity;
+        if (didCollide(obj1_copy, obj2)){
+            return true;
+        }
+    }
+    else if(obj1.direction == "right"){
+        obj1_copy.x += velocity;
+        if (didCollide(obj1_copy, obj2)){
+            return true;
+        }
+    }
     return false;
 }
 
